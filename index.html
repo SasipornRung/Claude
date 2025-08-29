@@ -1,915 +1,397 @@
 <!doctype html>
 <html lang="th">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PropDecoded • Safe Mode</title>
-
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- Chart.js -->
-<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Investor Lens • Fixed Version</title>
 
 <style>
   :root{
-    --green:#2E7D5B; --green-100:#E9F6F0; --green-300:#BFE3D2;
-    --teal:#1F6F63; --yellow:#F5E29E; --ink:#12333A; --muted:#4B5B5F;
-    --card:#ffffff; --border:#E5EFE9; --shadow:0 8px 24px rgba(0,0,0,.08);
+    --green:#1F6F63; --green-700:#0E3F38; --muted:#6A7D80; --line:#E6EEEC; --bg:#F6FAF9;
   }
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Prompt",Arial,sans-serif;background:linear-gradient(180deg,var(--green-100),#F7FAF9);color:var(--ink)}
-  .container{max-width:1120px;margin:0 auto;padding:16px 20px 80px}
-  .header{display:flex;align-items:center;gap:12px;padding:6px 0 10px;font-weight:800}
-  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--teal));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
-  h1{margin:8px 0 12px}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:#142a2a;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+  header{padding:14px 16px;display:flex;gap:10px;align-items:center}
+  .badge{background:#E9F6F0;color:var(--green-700);font-weight:800;padding:6px 10px;border-radius:8px}
+  h1{font-size:18px;margin:0}
+  .wrap{padding:0 16px 16px}
+  .row{display:grid;grid-template-columns:1.35fr .9fr;gap:12px}
+  @media (max-width:980px){.row{grid-template-columns:1fr}}
 
-  .quick-grid{display:grid;gap:14px;grid-template-columns:1fr 1fr}
-  @media(min-width:900px){.quick-grid{grid-template-columns:repeat(4,1fr)}}
-  .qcard{background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:18px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;border:none}
-  .qicon{width:36px;height:36px;border-radius:10px;background:var(--green-300);display:grid;place-items:center;font-weight:900;color:#1F6F63}
-  .hint{color:#6A7D80;font-size:13px;margin-top:2px}
+  /* ===== Map Placeholder ===== */
+  #map{height:66vh;min-height:420px;background:#fff;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden;z-index:10;
+    display:flex;align-items:center;justify-content:center;flex-direction:column}
+  .map-placeholder{text-align:center;color:var(--muted);padding:40px}
+  .map-placeholder h3{margin:0 0 10px;color:var(--green-700)}
+  .heat-demo{width:200px;height:120px;border-radius:8px;margin:10px 0;
+    background:linear-gradient(45deg, #4FC3F7 0%, #FFF176 30%, #FFA726 70%, #E53935 100%);
+    position:relative}
+  .heat-demo::after{content:'Heat Map Demo';position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+    font-size:12px;color:var(--muted)}
 
-  .lens-bar{margin:18px 0 12px;display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:5}
-  .seg{border:2px solid var(--green);border-radius:999px;padding:4px;display:inline-flex;gap:6px;background:#fff;box-shadow:var(--shadow)}
-  .seg button{all:unset;padding:8px 14px;border-radius:999px;color:var(--green);font-weight:700;cursor:pointer}
-  .seg button.active{background:linear-gradient(180deg,#D6EFE3,#fff);color:var(--ink);box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+  /* ===== Right Panel ===== */
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:66vh;position:relative;z-index:1}
+  .kpis{display:flex;gap:8px;margin:0 0 10px}
+  .kpi{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px}
+  .kpi small{color:var(--muted)} .kpi b{color:var(--green-700);font-size:20px}
 
-  .main{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;align-items:start}
-  @media(max-width:920px){.main{grid-template-columns:1fr}}
+  /* ===== Slides with CSS Charts ===== */
+  .frame{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .track{display:flex;transition:transform .35s ease;will-change:transform}
+  .slide{min-width:100%;padding:12px}
+  .slide h3{margin:0 0 8px;font-size:16px}
+  .facts{margin:6px 0 0 18px;line-height:1.6}
+  
+  /* CSS Charts */
+  .chart-container{height:180px;margin:10px 0;position:relative;background:#f8faf9;border-radius:8px;padding:15px}
+  .css-chart{height:100%;display:flex;align-items:end;justify-content:space-around;gap:8px}
+  .bar{background:var(--green);border-radius:4px 4px 0 0;min-width:25px;position:relative;transition:all 0.3s ease}
+  .bar:hover{opacity:0.8}
+  .bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted)}
+  .bar-value{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--green-700)}
+  
+  /* Line Chart CSS */
+  .line-chart{position:relative;height:100%;border-left:1px solid #ddd;border-bottom:1px solid #ddd}
+  .line-path{position:absolute;bottom:0;left:0;right:0;height:100%}
+  .line-svg{width:100%;height:100%}
+  
+  .mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+  .stat{background:#f8faf9;padding:8px;border-radius:6px;text-align:center}
+  .stat .label{font-size:11px;color:var(--muted);margin-bottom:2px}
+  .stat .value{font-weight:800;color:var(--green-700)}
 
-  #map{height:56vh;min-height:320px;border-radius:16px;box-shadow:var(--shadow)}
-  .insight{background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:16px 16px 10px}
-  .badge{display:inline-block;background:#BFE3D2;color:#1F6F63;padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px;margin-right:6px}
-  .meter{height:10px;background:#ECF2F3;border-radius:999px;overflow:hidden}
-  .meter>span{display:block;height:100%;background:linear-gradient(90deg,#CFEBDD,var(--yellow));width:40%}
-  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
-  .kpi .card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px}
-  .muted{color:var(--muted)} details{background:#FAFCFB;border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin:6px 0}
+  .dots{display:flex;justify-content:center;gap:10px;margin-top:10px}
+  .dot{width:28px;height:8px;border-radius:999px;background:#E0E7E4;border:0;cursor:pointer;transition:all 0.2s}
+  .dot[aria-selected="true"]{background:var(--green)}
+  .dot:hover{transform:scale(1.1)}
 
-  /* Renovator dashboard (light) */
-  #renovatorDash{display:none;height:56vh;min-height:320px}
-  .reno-wrap{height:100%;background:#fff;color:var(--ink);border-radius:16px;box-shadow:var(--shadow);padding:16px;overflow:auto}
-  .reno-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media(max-width:900px){.reno-grid{grid-template-columns:1fr}}
-  .reno-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px}
-  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 10px}
-  .kpiD{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px}
-  .kpiD .lab{font-size:12px;color:#4B5B5F}
-  .kpiD .val{font-size:22px;margin-top:2px;color:var(--ink)}
-  .pos{color:#2E7D5B}.neg{color:#d44a54}
-  .canvas{height:260px}
-  .badge-green{display:inline-block;background:#BFE3D2;color:#1F6F63;padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px;margin:8px 0}
-  .range-wrap{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans Thai';margin:8px 0}
-  .range-title{margin-bottom:6px;color:#12333A;font-weight:700}
-  .range-bar{position:relative;height:28px;border-radius:14px;overflow:hidden;background:linear-gradient(90deg,#2E7D5B 0%, #F5E29E 50%, #d44a54 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
-  .range-frame{position:absolute;inset:0;border:2px solid #fff;border-radius:14px;pointer-events:none}
-  .range-marker{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
-  .range-tag{position:absolute;transform:translate(-50%,8px);background:#eef2ff;color:#1e40af;font-size:12px;padding:3px 8px;border-radius:999px;white-space:nowrap}
-  .range-labels{display:flex;justify-content:space-between;color:#4B5B5F;font-size:12px;margin-top:4px}
-  .range-note{font-size:12px;color:#4B5B5F;margin-top:4px}
-
-  /* กัน overlay มาทับเลนส์ */
-  .lens-bar, .seg, .seg button { pointer-events:auto }
+  /* Status */
+  .status{background:#DFF5E1;color:#0E6B3B;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:10px}
+  .search-box{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;margin:10px 0;display:flex;gap:8px}
+  .search-box input{border:0;outline:none;flex:1;padding:4px 8px}
+  .search-box button{background:var(--green);color:#fff;border:0;border-radius:4px;padding:6px 12px;cursor:pointer}
 </style>
 </head>
 <body>
-  <div class="container">
-    <header class="header"><div class="logo">PD</div> PropDecoded</header>
-    <h1>ยินดีต้อนรับ</h1>
+<header><div class="badge">PD</div><h1>Investor Lens • CSS Charts Version</h1></header>
 
-    <section class="quick-grid" aria-label="เมนูด่วน">
-      <button class="qcard"><div class="qicon">➤</div><div><div class="qtitle">เริ่มต้นใช้งาน</div><div class="hint">เลือกเลนส์แล้วเริ่มสำรวจ</div></div></button>
-      <button class="qcard"><div class="qicon">⌁</div><div><div class="qtitle">บทวิเคราะห์</div><div class="hint">อ่าน insight ที่คัดสรร</div></div></button>
-      <button class="qcard"><div class="qicon">§</div><div><div class="qtitle">ข้อกฎหมายที่ควรทราบ</div><div class="hint">ข้อมูลกลางเพื่อประกอบความเข้าใจ</div></div></button>
-      <button class="qcard"><div class="qicon">☎</div><div><div class="qtitle">ติดต่อเรา</div><div class="hint">อีเมลถึงทีมงาน</div></div></button>
-    </section>
-
-    <section class="lens-bar">
-      <div class="seg" role="tablist" aria-label="มุมมองข้อมูล">
-        <button class="active" id="lens-tenant" role="tab" aria-selected="true">ผู้เช่า</button>
-        <button id="lens-investor" role="tab" aria-selected="false">นักลงทุน</button>
-        <button id="lens-renovator" role="tab" aria-selected="false">รีโนเวท/ดีเวลอป</button>
-      </div>
-    </section>
-
-    <section class="main">
-      <div>
-        <div id="map" aria-label="แผนที่"></div>
-
-        <div id="renovatorDash">
-          <div class="reno-wrap">
-            <h2 class="reno-title">Investor Portfolio</h2>
-            <div class="kpis">
-              <div class="kpiD"><div class="lab">จำนวนนักลงทุน</div><div id="kpiI" class="val">–</div></div>
-              <div class="kpiD"><div class="lab">จำนวนห้องชุดทั้งหมด</div><div id="kpiU" class="val">–</div></div>
-              <div class="kpiD"><div class="lab">กำไร/ขาดทุนรวม</div><div id="kpiN" class="val">–</div></div>
-            </div>
-            <div class="reno-grid">
-              <div class="reno-card">
-                <h4 style="margin:0 0 8px">สัดส่วนจำนวนห้องราย (Donut)</h4>
-                <div class="canvas"><canvas id="donut"></canvas></div>
-                <span class="badge-green">Developer Benchmarks</span>
-                <div id="benchMarket"></div>
-                <div id="benchOwner"></div>
-              </div>
-              <div class="reno-card">
-                <h4 style="margin:0 0 8px">กำไร/ขาดทุนสุทธิต่อราย (Bar)</h4>
-                <div class="canvas"><canvas id="barV"></canvas></div>
-                <div class="muted" style="margin-top:6px">แท่งเขียว = กำไร • แท่งแดง = ขาดทุน</div>
-              </div>
-            </div>
+<div class="wrap">
+  <div class="status">✅ Status: Working with CSS Charts (ไม่ต้องพึ่ง External Libraries)</div>
+  
+  <div class="row">
+    <section>
+      <div id="map">
+        <div class="map-placeholder">
+          <h3>Heat Map Visualization</h3>
+          <div class="heat-demo" id="heatDemo"></div>
+          <p>Simulated heat map for <span id="areaName">Sukhumvit</span></p>
+          <div class="search-box">
+            <input id="areaSearch" placeholder="พิมพ์: Sukhumvit, Ekkamai, Thonglor, Rama9" />
+            <button id="areaGo">เลือก</button>
           </div>
         </div>
       </div>
-
-      <aside class="insight">
-        <span class="badge" id="lensTag">ผู้เช่า</span>
-        <h3 id="areaTitle">วัฒนา</h3>
-        <div class="muted" id="subtitle">ภาพรวมสำหรับผู้อาศัย</div>
-        <div style="margin:12px 0 6px;font-weight:800">ตัวชี้วัดหลัก</div>
-        <div class="meter"><span id="meterFill" style="width:60%"></span></div>
-        <div class="kpi">
-          <div class="card"><h4>ข้อมูลย่อ</h4><div class="muted" id="kpiLeftDesc">CBD ~ 18 นาที • BTS ~ 6 นาที</div></div>
-          <div class="card"><h4 id="kpiRightTitle">รีวิวล่าสุด</h4><div class="muted" id="kpiRightDesc">“ย่านเงียบช่วงกลางคืน มีร้านสะดวกซื้อใกล้ ๆ”</div></div>
-        </div>
-        <details open><summary>รายละเอียด</summary>
-          <p class="muted" id="detailsText">• ตัวอย่างข้อความรายละเอียดจากไฟล์ JSON</p>
-        </details>
-      </aside>
     </section>
+
+    <aside class="panel">
+      <div class="kpis">
+        <div class="kpi"><small>Yield (ย่าน)</small><b id="kpiYield">5.6%</b></div>
+        <div class="kpi"><small>Cap Rate (ย่าน)</small><b id="kpiCap">4.2%</b></div>
+      </div>
+
+      <div class="frame">
+        <div class="track" id="track">
+          <!-- Slide 1: Heat Map Info -->
+          <section class="slide">
+            <h3>วิธีอ่าน Heat Map</h3>
+            <ul class="facts">
+              <li><strong style="color:#E53935">สีแดง</strong> = กิจกรรมหนาแน่นสูงสุด</li>
+              <li><strong style="color:#FFA726">สีส้ม</strong> = กิจกรรมปานกลาง</li>
+              <li><strong style="color:#4FC3F7">สีฟ้า</strong> = กิจกรรมน้อย</li>
+            </ul>
+            <div class="mini-stats">
+              <div class="stat"><div class="label">Hot Zones</div><div class="value" id="hotZones">4</div></div>
+              <div class="stat"><div class="label">Coverage</div><div class="value">85%</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 2: Take-up Rate Chart -->
+          <section class="slide">
+            <h3>Take-up Rate (5 ปี)</h3>
+            <div class="chart-container">
+              <div class="line-chart">
+                <svg class="line-svg" id="lineChart">
+                  <polyline id="takeLine" fill="none" stroke="#1F6F63" stroke-width="3" />
+                  <text x="10" y="15" font-size="10" fill="#6A7D80">80%</text>
+                  <text x="10" y="35" font-size="10" fill="#6A7D80">60%</text>
+                  <text x="10" y="55" font-size="10" fill="#6A7D80">40%</text>
+                </svg>
+              </div>
+            </div>
+            <div class="mini-stats">
+              <div class="stat"><div class="label">Average</div><div class="value" id="avgTakeup">78%</div></div>
+              <div class="stat"><div class="label">Trend</div><div class="value" id="trendTakeup">↗ +13%</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 3: Price Comparison -->
+          <section class="slide">
+            <h3>Launch vs Resale Price</h3>
+            <div class="chart-container">
+              <div class="css-chart" id="priceChart">
+                <div class="bar" style="height:60%"><div class="bar-label">2020</div><div class="bar-value">150k</div></div>
+                <div class="bar" style="height:70%"><div class="bar-label">2021</div><div class="bar-value">160k</div></div>
+                <div class="bar" style="height:80%"><div class="bar-label">2022</div><div class="bar-value">170k</div></div>
+                <div class="bar" style="height:85%"><div class="bar-label">2023</div><div class="bar-value">175k</div></div>
+                <div class="bar" style="height:90%"><div class="bar-label">2024</div><div class="bar-value">180k</div></div>
+              </div>
+            </div>
+            <div class="mini-stats">
+              <div class="stat"><div class="label">Launch Avg</div><div class="value" id="launchPrice">180k</div></div>
+              <div class="stat"><div class="label">Resale Avg</div><div class="value" id="resalePrice">165k</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 4: Supply Chart -->
+          <section class="slide">
+            <h3>Supply vs Demand</h3>
+            <div class="chart-container">
+              <div class="css-chart" id="supplyChart">
+                <div class="bar" style="height:45%; background:#FFA726"><div class="bar-label">2020</div><div class="bar-value">1.8k</div></div>
+                <div class="bar" style="height:55%; background:#FFA726"><div class="bar-label">2021</div><div class="bar-value">2.0k</div></div>
+                <div class="bar" style="height:65%; background:#FFA726"><div class="bar-label">2022</div><div class="bar-value">2.2k</div></div>
+                <div class="bar" style="height:80%; background:#FFA726"><div class="bar-label">2023</div><div class="bar-value">2.4k</div></div>
+                <div class="bar" style="height:95%; background:#FFA726"><div class="bar-label">2024</div><div class="bar-value">2.5k</div></div>
+              </div>
+            </div>
+            <div class="mini-stats">
+              <div class="stat"><div class="label">New Units</div><div class="value" id="newUnits">2,450</div></div>
+              <div class="stat"><div class="label">Demand Index</div><div class="value" id="demandIndex">0.85</div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="dots" role="tablist">
+        <button class="dot" data-go="1" aria-selected="true"></button>
+        <button class="dot" data-go="2"></button>
+        <button class="dot" data-go="3"></button>
+        <button class="dot" data-go="4"></button>
+      </div>
+    </aside>
   </div>
+</div>
 
 <script>
-'use strict';
-
-window.addEventListener('load', () => {
-  const log = (...a)=>console.log('[PD]',...a);
-  const showError = (msg)=>{ console.error(msg); alert('Error: '+msg); };
-
-  // Elements
-  const mapEl = document.getElementById('map');
-  const renoEl = document.getElementById('renovatorDash');
-  const lensBtns = {
-    tenant: document.getElementById('lens-tenant'),
-    investor: document.getElementById('lens-investor'),
-    renovator: document.getElementById('lens-renovator'),
-  };
-
-  // Right pane refs
-  const lensTag=document.getElementById('lensTag'), subtitle=document.getElementById('subtitle'),
-        meterFill=document.getElementById('meterFill'),
-        kpiLeftDesc=document.getElementById('kpiLeftDesc'),
-        kpiRightTitle=document.getElementById('kpiRightTitle'),
-        kpiRightDesc=document.getElementById('kpiRightDesc'),
-        detailsText=document.getElementById('detailsText');
-
-  const fmt = n => Number(n).toLocaleString('th-TH');
-  const soft = i => `hsl(${(i*137.508)%360} 70% 55%)`;
-
-  // Safe map init
-  function initMap(){
-    if (!window.L) { showError('Leaflet ไม่โหลด ลองเช็กเน็ต/CDN'); return null; }
-    try{
-      const m = L.map(mapEl).setView([13.736717, 100.523186], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        maxZoom:19, attribution:'&copy; OpenStreetMap'
-      }).addTo(m);
-      [[13.7307,100.5402,'Condo A'],[13.7425,100.5167,'Condo B'],[13.7253,100.5101,'Condo C']]
-        .forEach(([lat,lng,label])=>L.marker([lat,lng]).addTo(m).bindPopup(label));
-      return m;
-    }catch(e){ showError('Map init failed: '+e.message); return null; }
+/* ================= DATA ================= */
+const AREAS = {
+  sukhumvit: {
+    kpi: {yield: 5.6, cap: 4.2},
+    takeup: [65,68,72,74,78],
+    prices: {launch: [150,160,170,175,180], resale: [140,150,155,160,165]},
+    supply: [1800,2000,2200,2400,2450],
+    hotZones: 4,
+    heatColor: 'linear-gradient(45deg, #4FC3F7 0%, #FFF176 30%, #FFA726 50%, #E53935 80%)'
+  },
+  ekkamai: {
+    kpi: {yield: 5.2, cap: 3.9},
+    takeup: [60,65,70,72,75],
+    prices: {launch: [130,140,150,155,160], resale: [125,135,145,148,152]},
+    supply: [1200,1350,1500,1650,1800],
+    hotZones: 3,
+    heatColor: 'linear-gradient(45deg, #4FC3F7 0%, #FFF176 40%, #FFA726 80%)'
+  },
+  thonglor: {
+    kpi: {yield: 5.4, cap: 4.0},
+    takeup: [70,72,75,78,80],
+    prices: {launch: [200,210,220,225,230], resale: [185,195,205,210,215]},
+    supply: [900,1000,1100,1200,1300],
+    hotZones: 5,
+    heatColor: 'linear-gradient(45deg, #FFF176 0%, #FFA726 30%, #E53935 60%)'
+  },
+  rama9: {
+    kpi: {yield: 5.0, cap: 3.7},
+    takeup: [58,62,66,68,70],
+    prices: {launch: [140,145,150,158,165], resale: [130,138,142,148,155]},
+    supply: [2000,2200,2400,2600,2800],
+    hotZones: 3,
+    heatColor: 'linear-gradient(45deg, #4FC3F7 0%, #FFF176 50%, #FFA726 90%)'
   }
+};
 
-  // Bench renderer
-  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
-  function renderRange(mount, data){
-    mount.innerHTML=''; if(!data||!(data.min>0)||!(data.max>data.min)) return;
-    const wrap=document.createElement('div'); wrap.className='range-wrap';
-    const t=document.createElement('div'); t.className='range-title'; t.textContent=data.title||'ช่วงราคา';
-    const bar=document.createElement('div'); bar.className='range-bar';
-    const frame=document.createElement('div'); frame.className='range-frame';
-    const marker=document.createElement('div'); marker.className='range-marker';
-    const tag=document.createElement('div'); tag.className='range-tag'; tag.textContent=`ราคาของคุณ: ${fmt(data.actual)} ${data.unit||''}`;
-    const labels=document.createElement('div'); labels.className='range-labels';
-    labels.innerHTML=`<span>${fmt(data.min)}</span><span>${fmt(data.max)}</span>`;
-    const note=document.createElement('div'); note.className='range-note';
-    bar.appendChild(frame); bar.appendChild(marker); bar.appendChild(tag);
-    wrap.appendChild(t); wrap.appendChild(bar); wrap.appendChild(labels); wrap.appendChild(note);
-    mount.appendChild(wrap);
-    function position(){
-      const rect=bar.getBoundingClientRect();
-      const a=clamp(data.actual??data.min,data.min,data.max);
-      const p=(a-data.min)/(data.max-data.min); const x=p*rect.width;
-      marker.style.left=x+'px'; tag.style.left=x+'px';
-      const mid=(data.min+data.max)/2, diff=((a-mid)/mid)*100;
-      const zone=p<.33?'ช่วงล่าง':(p>.67?'ช่วงบน':'กลางช่วง');
-      note.innerHTML=`ตำแหน่ง: <b>${zone}</b> (ต่างจากค่ากลาง ~${diff.toFixed(1)}%)`;
+const AREA_NAMES = {sukhumvit:'Sukhumvit', ekkamai:'Ekkamai', thonglor:'Thonglor', rama9:'Rama 9'};
+let currentArea = 'sukhumvit';
+
+/* ============== UPDATE FUNCTIONS ============== */
+function updateArea(areaKey) {
+  if (!AREAS[areaKey]) return;
+  currentArea = areaKey;
+  const area = AREAS[areaKey];
+  
+  // Update KPIs
+  document.getElementById('kpiYield').textContent = area.kpi.yield + '%';
+  document.getElementById('kpiCap').textContent = area.kpi.cap + '%';
+  
+  // Update area name and heat map
+  document.getElementById('areaName').textContent = AREA_NAMES[areaKey];
+  document.getElementById('heatDemo').style.background = area.heatColor;
+  
+  // Update stats
+  const lastTakeup = area.takeup[area.takeup.length-1];
+  const firstTakeup = area.takeup[0];
+  const trendPercent = Math.round(((lastTakeup - firstTakeup) / firstTakeup) * 100);
+  
+  document.getElementById('avgTakeup').textContent = lastTakeup + '%';
+  document.getElementById('trendTakeup').textContent = (trendPercent > 0 ? '↗ +' : '↘ ') + Math.abs(trendPercent) + '%';
+  document.getElementById('launchPrice').textContent = area.prices.launch[area.prices.launch.length-1] + 'k';
+  document.getElementById('resalePrice').textContent = area.prices.resale[area.prices.resale.length-1] + 'k';
+  document.getElementById('newUnits').textContent = area.supply[area.supply.length-1].toLocaleString();
+  document.getElementById('hotZones').textContent = area.hotZones;
+  document.getElementById('demandIndex').textContent = '0.' + (70 + Math.round(Math.random() * 20));
+  
+  // Update line chart
+  updateLineChart(area.takeup);
+  
+  // Update price bars
+  updatePriceChart(area.prices.launch);
+  
+  // Update supply bars
+  updateSupplyChart(area.supply);
+}
+
+function updateLineChart(data) {
+  const svg = document.getElementById('lineChart');
+  const line = document.getElementById('takeLine');
+  const width = 180;
+  const height = 120;
+  
+  const points = data.map((val, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((val - 50) / 30) * height; // scale 50-80 to full height
+    return `${x},${y}`;
+  }).join(' ');
+  
+  line.setAttribute('points', points);
+}
+
+function updatePriceChart(data) {
+  const chart = document.getElementById('priceChart');
+  const bars = chart.querySelectorAll('.bar');
+  const max = Math.max(...data);
+  
+  data.forEach((val, i) => {
+    if (bars[i]) {
+      const height = (val / max) * 90; // scale to 90% max
+      bars[i].style.height = height + '%';
+      bars[i].querySelector('.bar-value').textContent = val + 'k';
     }
-    position(); window.addEventListener('resize',position);
+  });
+}
+
+function updateSupplyChart(data) {
+  const chart = document.getElementById('supplyChart');
+  const bars = chart.querySelectorAll('.bar');
+  const max = Math.max(...data);
+  
+  data.forEach((val, i) => {
+    if (bars[i]) {
+      const height = (val / max) * 95; // scale to 95% max
+      bars[i].style.height = height + '%';
+      bars[i].querySelector('.bar-value').textContent = (val/1000).toFixed(1) + 'k';
+    }
+  });
+}
+
+/* ============== SLIDES ============== */
+function initSlides() {
+  const track = document.getElementById('track');
+  const dots = [...document.querySelectorAll('.dot')];
+  let current = 1;
+  
+  const showSlide = (n) => {
+    current = Math.max(1, Math.min(4, n));
+    track.style.transform = `translateX(${-(current-1)*100}%)`;
+    dots.forEach(d => d.setAttribute('aria-selected', d.dataset.go == current ? 'true' : 'false'));
+  };
+  
+  // Dot navigation
+  dots.forEach(dot => dot.addEventListener('click', () => showSlide(+dot.dataset.go)));
+  
+  // Touch/swipe support
+  let startX = 0, startY = 0, isDragging = false;
+  const frame = track.parentElement;
+  
+  frame.addEventListener('pointerdown', e => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    frame.setPointerCapture(e.pointerId);
+  });
+  
+  frame.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    
+    // Show visual feedback
+    if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      track.style.transform = `translateX(${-(current-1)*100 + deltaX/5}%)`;
+    }
+  });
+  
+  frame.addEventListener('pointerup', e => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    const deltaX = e.clientX - startX;
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(e.clientY - startY)) {
+      showSlide(current + (deltaX > 0 ? -1 : 1));
+    } else {
+      // Snap back
+      track.style.transform = `translateX(${-(current-1)*100}%)`;
+    }
+  });
+  
+  showSlide(1);
+}
+
+/* ============== SEARCH ============== */
+function initSearch() {
+  const input = document.getElementById('areaSearch');
+  const button = document.getElementById('areaGo');
+  
+  const search = () => {
+    const query = input.value.toLowerCase().trim();
+    let areaKey = 'sukhumvit'; // default
+    
+    if (query.includes('ekka')) areaKey = 'ekkamai';
+    else if (query.includes('thong') || query.includes('ทองหล')) areaKey = 'thonglor';  
+    else if (query.includes('rama') || query.includes('พระราม')) areaKey = 'rama9';
+    
+    updateArea(areaKey);
+    input.value = AREA_NAMES[areaKey];
+  };
+  
+  button.addEventListener('click', search);
+  input.addEventListener('keypress', e => {
+    if (e.key === 'Enter') search();
+  });
+}
+
+/* ============== INIT ============== */
+document.addEventListener('DOMContentLoaded', () => {
+  initSlides();
+  initSearch();
+  updateArea('sukhumvit');
+  
+  // URL parameter support
+  const params = new URLSearchParams(location.search);
+  const area = params.get('area');
+  if (area && AREAS[area]) {
+    updateArea(area);
+    document.getElementById('areaSearch').value = AREA_NAMES[area];
   }
-
-  // Charts
-  let donutChart=null, barVChart=null;
-  function renderRenovator(){
-    if (!window.Chart){ showError('Chart.js ไม่โหลด'); return; }
-    const holdings=[
-      {investor:'Alpha Fund',positions:[{pnl:15000},{pnl:-5000}]},
-      {investor:'Beta Capital',positions:[{pnl:8000},{pnl:3000},{pnl:-2000}]},
-      {investor:'Solo Investor',positions:[{pnl:12000}]},
-      {investor:'Gamma Trust',positions:[{pnl:4000},{pnl:2000}]},
-    ];
-    const labels=holdings.map(h=>h.investor);
-    const unitCounts=holdings.map(h=>h.positions.length);
-    const profits=holdings.map(h=>h.positions.reduce((s,p)=>s+(Number(p.pnl)||0),0));
-    const netTotal=profits.reduce((s,n)=>s+n,0);
-
-    document.getElementById('kpiI').textContent=fmt(holdings.length);
-    document.getElementById('kpiU').textContent=fmt(unitCounts.reduce((a,b)=>a+b,0));
-    const kN=document.getElementById('kpiN'); kN.textContent=(netTotal>=0?'+':'–')+'฿'+fmt(Math.abs(netTotal));
-    kN.classList.toggle('pos',netTotal>=0); kN.classList.toggle('neg',netTotal<0);
-
-    donutChart&&donutChart.destroy();
-    donutChart=new Chart(document.getElementById('donut'),{
-      type:'doughnut',
-      data:{labels,datasets:[{data:unitCounts,backgroundColor:labels.map((_,i)=>soft(i)),borderColor:'#fff',borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
-        plugins:{legend:{position:'bottom',labels:{color:'#12333A',font:{weight:'bold'}}},
-                 tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw} ห้อง`}}}}
-    });
-
-    barVChart&&barVChart.destroy();
-    barVChart=new Chart(document.getElementById('barV'),{
-      type:'bar',
-      data:{labels,datasets:[{label:'Net P/L (บาท)',data:profits,backgroundColor:profits.map(v=>v>=0?'#2E7D5B':'#d44a54')}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{
-          y:{beginAtZero:true,grid:{color:'rgba(18,51,58,0.12)'},ticks:{color:'#12333A',callback:v=>'฿'+fmt(v)}},
-          x:{grid:{display:false},ticks:{color:'#12333A'}}
-        },
-        plugins:{legend:{display:false}}
-      }
-    });
-
-    renderRange(document.getElementById('benchMarket'),{title:'ช่วงราคาตลาด (ยูนิตใกล้เคียง)',unit:'บาท/เดือน',min:18000,max:20000,actual:19000});
-    renderRange(document.getElementById('benchOwner'), {title:'ช่วงแนะนำ (Developer)',unit:'บาท/เดือน',min:18500,max:20500,actual:19800});
-  }
-
-  // Right pane JSON (optional)
-  async function loadLens(lens){
-    try{
-      const res=await fetch(`./${lens}.json?v=${Date.now()}`,{cache:'no-store'});
-      if(!res.ok) throw 0;
-      return await res.json();
-    }catch{ return {}; }
-  }
-
-  // Lens apply
-  async function applyLens(lens){
-    Object.entries(lensBtns).forEach(([id,btn])=>{
-      btn.classList.toggle('active', id===lens);
-      btn.setAttribute('aria-selected', id===lens ? 'true' : 'false');
-    });
-    const isReno = (lens==='renovator');
-    mapEl.style.display = isReno ? 'none' : 'block';
-    renoEl.style.display = isReno ? 'block' : 'none';
-    if (isReno) renderRenovator();
-
-    const c = await loadLens(lens);
-    document.getElementById('lensTag').textContent = c.tag || (isReno?'รีโนเวท/ดีเวลอป':(lens==='investor'?'นักลงทุน':'ผู้เช่า'));
-    document.getElementById('subtitle').textContent = c.subtitle || (isReno ? 'แดชบอร์ดพอร์ตการลงทุน (เดโม่)' : 'ภาพรวมสำหรับผู้อาศัย');
-    document.getElementById('meterFill').style.width = Math.round((c.meter ?? 0.6)*100)+'%';
-    document.getElementById('kpiLeftDesc').textContent = c.kpiLeftDesc || 'CBD ~ 18 นาที • BTS ~ 6 นาที';
-    document.getElementById('kpiRightTitle').textContent= c.kpiRightTitle || 'รีวิวล่าสุด';
-    document.getElementById('kpiRightDesc').textContent = c.kpiRightDesc  || '“ย่านเงียบช่วงกลางคืน มีร้านสะดวกซื้อใกล้ ๆ”';
-    document.getElementById('detailsText').innerHTML   = c.detailsText   || '• ตัวอย่างข้อความรายละเอียดจากไฟล์ JSON';
-
-    localStorage.setItem('pd_lens', lens);
-  }
-
-  // Bind buttons (robust)
-  lensBtns.tenant?.addEventListener('click', ()=>applyLens('tenant'));
-  lensBtns.investor?.addEventListener('click', ()=>applyLens('investor'));
-  lensBtns.renovator?.addEventListener('click', ()=>applyLens('renovator'));
-
-  // Boot
-  const m = initMap();
-  if (!m) log('Map failed to init');
-  applyLens(localStorage.getItem('pd_lens') || 'tenant');
 });
 </script>
-  <!-- ===== Investor Lens (Overlay) — DROP-IN PACK ===== -->
-<style>
-  /* Base */
-  :root{
-    --ink:#163330; --muted:#6A7D80;
-    --card:#fff; --bg:#0F2E29;
-    --g700:#0E3F38; --g600:#15574E; --g100:#E9F6F0;
-    --shadow:0 10px 28px rgba(12,35,31,.18)
-  }
-  .inv-hidden{display:none!important}
-  body.inv-open{overflow:hidden}
-
-  /* Overlay */
-  #invModal{position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,.28)}
-  #investorLens{
-    position:fixed; z-index:9999; inset:48px 24px 24px 24px;
-    background:var(--card); border-radius:16px; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; overflow:hidden;
-    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial;
-    color:var(--ink)
-  }
-  #invHeader{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 16px; border-bottom:1px solid #e6eeec; background:#fafdfb
-  }
-  #invHeader h3{margin:0;font-size:18px;font-weight:700}
-  #invClose{border:0;background:#edf6f3;padding:8px 12px;border-radius:999px;cursor:pointer}
-  #invBody{display:grid; grid-template-columns: 1.25fr .9fr; gap:16px; padding:16px; height:100%}
-
-  /* Left: Map */
-  .inv-left{display:flex;flex-direction:column;gap:10px;min-width:360px}
-  .inv-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .inv-toolbar select,.inv-toolbar input{height:36px;padding:0 12px;border-radius:999px;border:1px solid #dfe9e6}
-  .inv-toolbar button{height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--g600);color:#fff;cursor:pointer}
-  .inv-mapwrap{background:#eef7f3;border-radius:14px;overflow:hidden;border:1px solid #e1eeea}
-  #invMap{height:52vh;min-height:340px}
-
-  /* area label markers */
-  .inv-label{background:#fff;border:1px solid #dfe9e6;border-radius:12px;padding:6px 10px;
-    font-weight:700; box-shadow:0 4px 10px rgba(0,0,0,.08); cursor:pointer; white-space:nowrap}
-  .inv-label:hover{border-color:#cfe0dc}
-
-  /* Right: panel */
-  .inv-right{display:flex;flex-direction:column;gap:14px}
-  .inv-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#fbfdfa;border:1px solid #e6eeec;border-radius:12px;padding:10px}
-  .inv-kpi small{color:var(--muted)}
-  .inv-kpi b{font-size:18px;color:var(--g700)}
-  .inv-card{background:#fff;border:1px solid #e6eeec;border-radius:12px;padding:14px}
-  .inv-dots{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-  .inv-dot{width:26px;height:6px;border-radius:999px;border:0;background:#dfe9e6;cursor:pointer}
-  .inv-dot.active{background:var(--g600)}
-  @media (max-width: 1024px){ #invBody{grid-template-columns: 1fr} }
-</style>
-
-<!-- Modal + Panel -->
-<div id="invModal" class="inv-hidden"></div>
-<div id="investorLens" class="inv-hidden" role="dialog" aria-label="Investor Lens">
-  <div id="invHeader">
-    <h3>PropDecoded • Investor Lens</h3>
-    <div style="display:flex;gap:8px;align-items:center">
-      <a id="invHelp" href="#" style="color:#6a7d80;text-decoration:none;font-size:13px">Heat • KPI • Slides</a>
-      <button id="invClose">ปิด</button>
-    </div>
-  </div>
-
-  <div id="invBody">
-    <!-- Left -->
-    <section class="inv-left">
-      <div class="inv-toolbar">
-        <select id="invArea">
-          <option value="sukhumvit">Sukhumvit</option>
-          <option value="ekkamai">Ekkamai</option>
-          <option value="thonglor">Thonglor</option>
-          <option value="onnut">On Nut</option>
-          <option value="ratchada">Ratchada</option>
-        </select>
-        <input id="invSearch" placeholder="ค้นหาย่าน เช่น Sukhumvit" />
-        <button id="invGo">เลือก</button>
-      </div>
-      <div class="inv-mapwrap"><div id="invMap"></div></div>
-    </section>
-
-    <!-- Right -->
-    <aside class="inv-right">
-      <div class="inv-kpi">
-        <div><small>Yield (คำนวณ)</small><br><b id="kpiYield">—</b></div>
-        <div><small>Cap Rate (คำนวณ)</small><br><b id="kpiCap">—</b></div>
-      </div>
-
-      <div id="invText" class="inv-card">
-        <!-- จะถูกเติมด้วยสไลด์ -->
-      </div>
-
-      <div class="inv-dots">
-        <button class="inv-dot active" data-slide="0" aria-label="slide 1"></button>
-        <button class="inv-dot" data-slide="1" aria-label="slide 2"></button>
-        <button class="inv-dot" data-slide="2" aria-label="slide 3"></button>
-        <button class="inv-dot" data-slide="3" aria-label="slide 4"></button>
-      </div>
-    </aside>
-  </div>
-</div>
-
-<script>
-(() => {
-  /* ---------------- 0) dynamic loader ---------------- */
-  const loadCssOnce = (href, test=()=>false)=>{
-    if (test()) return;
-    const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l);
-  };
-  const loadScriptOnce = (src, test, cb)=>{
-    if (test()) return cb&&cb();
-    const s=document.createElement('script'); s.src=src; s.defer=true; s.onload=()=>cb&&cb(); document.head.appendChild(s);
-  };
-
-  loadCssOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', ()=>[...document.styleSheets].some(x=>x.href&&x.href.includes('leaflet.css')));
-  loadScriptOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', ()=>window.L, ()=>{
-    loadScriptOnce('https://unpkg.com/leaflet.heat/dist/leaflet-heat.js', ()=>window.L && L.heatLayer);
-  });
-
-  /* ---------------- 1) data ---------------- */
-  const INV = {
-    sukhumvit:{ center:[13.736,100.576],
-      heat:[[13.732,100.572,0.9],[13.739,100.575,0.65],[13.735,100.581,0.8],[13.728,100.583,0.7]],
-      kpi:{yield:5.6, cap:4.2}
-    },
-    ekkamai:{ center:[13.724,100.582],
-      heat:[[13.724,100.582,0.85],[13.720,100.590,0.6],[13.728,100.575,0.7]],
-      kpi:{yield:5.2, cap:3.9}
-    },
-    thonglor:{ center:[13.731,100.578],
-      heat:[[13.731,100.578,0.82],[13.733,100.585,0.66],[13.729,100.570,0.74]],
-      kpi:{yield:5.4, cap:4.0}
-    },
-    onnut:{ center:[13.705,100.608],
-      heat:[[13.705,100.608,0.75],[13.699,100.612,0.58],[13.710,100.600,0.62]],
-      kpi:{yield:5.8, cap:4.5}
-    },
-    ratchada:{ center:[13.772,100.573],
-      heat:[[13.772,100.573,0.7],[13.768,100.567,0.64],[13.776,100.579,0.66]],
-      kpi:{yield:5.0, cap:3.7}
-    }
-  };
-
-  const SLIDES = [
-    { title: 'วิธีอ่าน Heat Map',
-      html: `<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>สีเข้ม</b> = ความหนาแน่นกิจกรรมสูง</li>
-        <li><b>สีอ่อน</b> = ความหนาแน่นต่ำ</li>
-        <li>ค้นหาย่าน จากช่องค้นหา แล้วกด <b>“เลือก”</b></li>
-      </ul>
-      <small style="color:#6a7d80">สไลด์ 1/4 • ปัด/คลิกจุดเพื่อเลื่อนไปสไลด์ถัดไป</small>`
-    },
-    { title: 'Demand & Liquidity',
-      html: `<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>Take-up Rate</b> = % ยูนิตขายได้ช่วงเปิดตัว</li>
-        <li><b>Absorption</b> = ยูนิตถูกขายต่อรอบเวลา</li>
-        <li><b>Overhang</b> = ยูนิตเหลือขาย</li>
-      </ul>
-      <small style="color:#6a7d80">สไลด์ 2/4 • ใช้เพื่ออ่านแรงซื้อและสภาพคล่อง</small>`
-    },
-    { title: 'Price Metrics',
-      html: `<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>Launch vs Resale</b> ดูจังหวะกำไรระหว่างเปิดตัวกับรีเซล</li>
-        <li><b>Benchmark</b> ราคาอ้างอิง (เช่น ดัชนี/ธนารักษ์) ใช้เทียบแนวโน้ม</li>
-      </ul>
-      <small style="color:#6a7d80">สไลด์ 3/4 • เห็นสเปรดราคาและแรงกดดัน</small>`
-    },
-    { title: 'Supply & Rental',
-      html: `<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>New Projects</b> สะท้อนซัพพลายใหม่/ความเข้มข้น</li>
-        <li><b>Yield vs Cap Rate</b> เทียบผลตอบแทนถือ/หลังซื้อขาย</li>
-      </ul>
-      <small style="color:#6a7d80">สไลด์ 4/4 • ใช้ประกอบการคัดกรอง</small>`
-    }
-  ];
-
-  /* ---------------- 2) state ---------------- */
-  const S = { inited:false, map:null, heat:null, labels:null, area:'sukhumvit', slide:0 };
-
-  /* ---------------- 3) UI helpers ---------------- */
-  const $ = (q,root=document)=>root.querySelector(q);
-  const $$ = (q,root=document)=>[...root.querySelectorAll(q)];
-  const fmt = n => (n==null||isNaN(n))?'—':(Number(n).toFixed(1)+'%');
-
-  function setDots(n){
-    S.slide = n;
-    $$('.inv-dot').forEach((d,i)=>d.classList.toggle('active', i===n));
-    const t = SLIDES[n];
-    $('#invText').innerHTML = `<h4 style="margin:0 0 8px 0">${t.title}</h4>${t.html}`;
-  }
-
-  function updateKPI(k){
-    $('#kpiYield').textContent = fmt(k.yield);
-    $('#kpiCap').textContent   = fmt(k.cap);
-  }
-
-  /* ---------------- 4) map init + update ---------------- */
-  function ensureMap(){
-    if (S.inited) return;
-    if (!window.L || !L.heatLayer){ setTimeout(ensureMap,120); return; }
-
-    S.map = L.map('invMap',{zoomControl:true}).setView([13.736,100.576],13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      maxZoom:19, attribution:'&copy; OpenStreetMap'
-    }).addTo(S.map);
-
-    S.heat = L.heatLayer([], { radius:22, blur:18, maxZoom:17 }).addTo(S.map);
-    S.labels = L.layerGroup().addTo(S.map);
-
-    // clickable labels
-    Object.entries(INV).forEach(([key, v])=>{
-      const icon = L.divIcon({className:'', html:`<div class="inv-label">${cap(key)}</div>`});
-      L.marker(v.center, {icon}).addTo(S.labels).on('click', ()=>selectArea(key));
-    });
-
-    S.inited = true;
-  }
-
-  function cap(k){ return k.replace(/(^|\s)\S/g, s=>s.toUpperCase()); }
-
-  function selectArea(key){
-    if (!INV[key]) return;
-    S.area = key;
-    const d = INV[key];
-    ensureMap();
-    S.map.flyTo(d.center, 14, {duration:.6});
-    S.heat.setLatLngs(d.heat);
-    updateKPI(d.kpi);
-    $('#invArea').value = key;
-  }
-
-  /* ---------------- 5) open/close ---------------- */
-  function openInvestor(){
-    $('#invModal').classList.remove('inv-hidden');
-    $('#investorLens').classList.remove('inv-hidden');
-    document.body.classList.add('inv-open');
-    ensureMap();
-    selectArea(S.area || 'sukhumvit');
-    setDots(S.slide||0);
-  }
-  function closeInvestor(){
-    $('#invModal').classList.add('inv-hidden');
-    $('#investorLens').classList.add('inv-hidden');
-    document.body.classList.remove('inv-open');
-  }
-
-  /* ---------------- 6) bind events ---------------- */
-  document.addEventListener('DOMContentLoaded', ()=>{
-    // hook existing "นักลงทุน"
-    const targets = [...document.querySelectorAll('a,button,.chip,[role="button"]')]
-      .filter(el=>/นักลงทุน/.test((el.textContent||'').trim()));
-    targets.forEach(el=>{
-      el.addEventListener('click',(e)=>{
-        e.preventDefault(); e.stopImmediatePropagation();
-        openInvestor();
-      }, {capture:true});
-      el.removeAttribute('href');
-    });
-
-    // select/search
-    $('#invGo').addEventListener('click', ()=>{
-      const s = ($('#invSearch').value||'').toLowerCase().trim();
-      const k = s && Object.keys(INV).find(k=>k.includes(s)) || $('#invArea').value;
-      selectArea(k);
-    });
-    $('#invArea').addEventListener('change', e=>selectArea(e.target.value));
-    $('#invClose').addEventListener('click', closeInvestor);
-    $('#invModal').addEventListener('click', closeInvestor);
-
-    // dots
-    $$('.inv-dot').forEach(dot=>dot.addEventListener('click', ()=>setDots(Number(dot.dataset.slide))));
-
-    // open via URL ?lens=investor
-    try{
-      const p = new URLSearchParams(location.search);
-      if (p.get('lens')==='investor') openInvestor();
-    }catch(e){}
-  });
-})();
-</script>
-<!-- ===== /Investor Lens (Overlay) — DROP-IN PACK ===== -->
-  <!-- ===== Investor Lens (Overlay) — DROP-IN PACK w/ 4 Slide Visuals ===== -->
-<style>
-  :root{
-    --ink:#163330; --muted:#6A7D80; --card:#fff; --bg:#0F2E29;
-    --g700:#0E3F38; --g600:#15574E; --g100:#E9F6F0; --border:#e6eeec;
-    --shadow:0 10px 28px rgba(12,35,31,.18)
-  }
-  .inv-hidden{display:none!important}
-  body.inv-open{overflow:hidden}
-
-  #invModal{position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,.28)}
-  #investorLens{
-    position:fixed; z-index:9999; inset:48px 24px 24px 24px;
-    background:var(--card); border-radius:16px; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; overflow:hidden;
-    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial;
-    color:var(--ink)
-  }
-  #invHeader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafdfb}
-  #invHeader h3{margin:0;font-size:18px;font-weight:700}
-  #invClose{border:0;background:#edf6f3;padding:8px 12px;border-radius:999px;cursor:pointer}
-  #invBody{display:grid; grid-template-columns: 1.25fr .95fr; gap:16px; padding:16px; height:100%}
-
-  .inv-left{display:flex;flex-direction:column;gap:10px;min-width:360px}
-  .inv-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .inv-toolbar select,.inv-toolbar input{height:36px;padding:0 12px;border-radius:999px;border:1px solid #dfe9e6}
-  .inv-toolbar button{height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--g600);color:#fff;cursor:pointer}
-  .inv-mapwrap{background:#eef7f3;border-radius:14px;overflow:hidden;border:1px solid #e1eeea}
-  #invMap{height:52vh;min-height:340px}
-
-  .inv-label{background:#fff;border:1px solid #dfe9e6;border-radius:12px;padding:6px 10px;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.08);cursor:pointer;white-space:nowrap}
-  .inv-label:hover{border-color:#cfe0dc}
-
-  .inv-right{display:flex;flex-direction:column;gap:14px}
-  .inv-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#fbfdfa;border:1px solid var(--border);border-radius:12px;padding:10px}
-  .inv-kpi small{color:var(--muted)}
-  .inv-kpi b{font-size:18px;color:var(--g700)}
-  .inv-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}
-
-  /* chart grid */
-  #invCharts{display:grid;grid-template-columns:1fr;gap:12px}
-  @media(min-width:1200px){ #invCharts{grid-template-columns:1fr 1fr} }
-  .chart-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fff}
-  .chart-card h5{margin:0 0 6px 0;font-size:13.5px;color:#36514d}
-
-  .inv-dots{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-  .inv-dot{width:26px;height:6px;border-radius:999px;border:0;background:#dfe9e6;cursor:pointer}
-  .inv-dot.active{background:var(--g600)}
-  @media (max-width: 1024px){ #invBody{grid-template-columns: 1fr} }
-</style>
-
-<div id="invModal" class="inv-hidden"></div>
-<div id="investorLens" class="inv-hidden" role="dialog" aria-label="Investor Lens">
-  <div id="invHeader">
-    <h3>PropDecoded • Investor Lens</h3>
-    <div style="display:flex;gap:8px;align-items:center">
-      <a id="invHelp" href="#" style="color:#6a7d80;text-decoration:none;font-size:13px">Heat • KPI • Slides</a>
-      <button id="invClose">ปิด</button>
-    </div>
-  </div>
-
-  <div id="invBody">
-    <!-- Left -->
-    <section class="inv-left">
-      <div class="inv-toolbar">
-        <select id="invArea">
-          <option value="sukhumvit">Sukhumvit</option>
-          <option value="ekkamai">Ekkamai</option>
-          <option value="thonglor">Thonglor</option>
-          <option value="onnut">On Nut</option>
-          <option value="ratchada">Ratchada</option>
-        </select>
-        <input id="invSearch" placeholder="ค้นหาย่าน เช่น Sukhumvit" />
-        <button id="invGo">เลือก</button>
-      </div>
-      <div class="inv-mapwrap"><div id="invMap"></div></div>
-    </section>
-
-    <!-- Right -->
-    <aside class="inv-right">
-      <div class="inv-kpi">
-        <div><small>Yield (คำนวณ)</small><br><b id="kpiYield">—</b></div>
-        <div><small>Cap Rate (คำนวณ)</small><br><b id="kpiCap">—</b></div>
-      </div>
-
-      <div id="invCharts" class="inv-card"><!-- กราฟของสไลด์จะมาลงตรงนี้ --></div>
-      <div id="invText" class="inv-card"><!-- คำอธิบายสไลด์ --></div>
-
-      <div class="inv-dots">
-        <button class="inv-dot active" data-slide="0" aria-label="slide 1"></button>
-        <button class="inv-dot" data-slide="1" aria-label="slide 2"></button>
-        <button class="inv-dot" data-slide="2" aria-label="slide 3"></button>
-        <button class="inv-dot" data-slide="3" aria-label="slide 4"></button>
-      </div>
-    </aside>
-  </div>
-</div>
-
-<script>
-(() => {
-  /* ---------- dynamic loaders ---------- */
-  const loadCssOnce=(href,test=()=>false)=>{ if(test())return; const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); };
-  const loadScriptOnce=(src,test,cb)=>{ if(test()) return cb&&cb(); const s=document.createElement('script'); s.src=src; s.defer=true; s.onload=()=>cb&&cb(); document.head.appendChild(s); };
-
-  loadCssOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', ()=>[...document.styleSheets].some(x=>x.href&&x.href.includes('leaflet.css')));
-  loadScriptOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', ()=>window.L, ()=>{
-    loadScriptOnce('https://unpkg.com/leaflet.heat/dist/leaflet-heat.js', ()=>window.L && L.heatLayer);
-  });
-  loadScriptOnce('https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js', ()=>window.Chart);
-
-  /* ---------- data ---------- */
-  const INV = {
-    sukhumvit:{ center:[13.736,100.576],
-      heat:[[13.732,100.572,0.9],[13.739,100.575,0.65],[13.735,100.581,0.8],[13.728,100.583,0.7]],
-      kpi:{yield:5.6, cap:4.2}
-    },
-    ekkamai:{ center:[13.724,100.582],
-      heat:[[13.724,100.582,0.85],[13.720,100.590,0.6],[13.728,100.575,0.7]],
-      kpi:{yield:5.2, cap:3.9}
-    },
-    thonglor:{ center:[13.731,100.578],
-      heat:[[13.731,100.578,0.82],[13.733,100.585,0.66],[13.729,100.570,0.74]],
-      kpi:{yield:5.4, cap:4.0}
-    },
-    onnut:{ center:[13.705,100.608],
-      heat:[[13.705,100.608,0.75],[13.699,100.612,0.58],[13.710,100.600,0.62]],
-      kpi:{yield:5.8, cap:4.5}
-    },
-    ratchada:{ center:[13.772,100.573],
-      heat:[[13.772,100.573,0.7],[13.768,100.567,0.64],[13.776,100.579,0.66]],
-      kpi:{yield:5.0, cap:3.7}
-    }
-  };
-
-  const SLIDES = [
-    { title:'วิธีอ่าน Heat Map',
-      info:`<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>สีเข้ม</b> = ความหนาแน่นกิจกรรมสูง</li>
-        <li><b>สีอ่อน</b> = ความหนาแน่นต่ำ</li>
-        <li>ค้นหาย่าน แล้วกด <b>“เลือก”</b> เพื่อซูม</li>
-      </ul>`
-    },
-    { title:'Demand & Liquidity',
-      info:`<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>Take-up Rate</b> = % ยูนิตขายได้ช่วงเปิดตัว</li>
-        <li><b>Absorption</b> = ยูนิตออกต่อรอบเวลา</li>
-        <li><b>Overhang</b> = ยูนิตเหลือขาย</li>
-      </ul>`
-    },
-    { title:'Price Metrics',
-      info:`<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li>เส้น <b>Launch</b> vs <b>Resale</b> ช่วยดูสเปรดผลตอบแทน</li>
-        <li><b>Benchmark</b> (เช่น ดัชนีธนารักษ์) ใช้เทียบแนวโน้ม</li>
-      </ul>`
-    },
-    { title:'Supply & Rental',
-      info:`<ul style="margin:0 0 0 18px;line-height:1.65">
-        <li><b>New Projects</b> สะท้อนซัพพลายใหม่</li>
-        <li><b>Yield vs Cap Rate</b> เทียบผลตอบแทนถือ/หลังซื้อขาย</li>
-      </ul>`
-    }
-  ];
-
-  const S = { inited:false, map:null, heat:null, labels:null, area:'sukhumvit', slide:0, charts:[] };
-  const $=(q,r=document)=>r.querySelector(q); const $$=(q,r=document)=>[...r.querySelectorAll(q)];
-  const fmt = n => (n==null||isNaN(n))?'—':(Number(n).toFixed(1)+'%');
-  const cap = k => k.replace(/(^|\s)\S/g, s=>s.toUpperCase());
-
-  /* ---------- map ---------- */
-  function ensureMap(){
-    if (S.inited) return;
-    if (!window.L || !L.heatLayer){ setTimeout(ensureMap,120); return; }
-
-    S.map = L.map('invMap',{zoomControl:true}).setView([13.736,100.576],13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(S.map);
-    S.heat = L.heatLayer([], { radius:22, blur:18, maxZoom:17 }).addTo(S.map);
-    S.labels = L.layerGroup().addTo(S.map);
-    Object.entries(INV).forEach(([key, v])=>{
-      const icon=L.divIcon({className:'', html:`<div class="inv-label">${cap(key)}</div>`});
-      L.marker(v.center,{icon}).addTo(S.labels).on('click',()=>selectArea(key));
-    });
-    S.inited = true;
-  }
-  function selectArea(key){
-    if (!INV[key]) return; S.area=key;
-    const d=INV[key]; ensureMap(); S.map.flyTo(d.center,14,{duration:.6});
-    S.heat.setLatLngs(d.heat); updateKPI(d.kpi); renderSlide(S.slide);
-    $('#invArea').value = key;
-  }
-  function updateKPI(k){ $('#kpiYield').textContent=fmt(k.yield); $('#kpiCap').textContent=fmt(k.cap); }
-
-  /* ---------- charts ---------- */
-  function destroyCharts(){ S.charts.forEach(c=>{try{c.destroy()}catch(e){}}); S.charts=[]; }
-  function makeCanvasCard(title,id){
-    const wrap=document.createElement('div'); wrap.className='chart-card';
-    wrap.innerHTML=`<h5>${title}</h5><canvas id="${id}" height="160"></canvas>`;
-    return wrap;
-  }
-  function seed(n){ // simple deterministic pseudo-random based on area+slide
-    let x = Math.sin(n)*10000; return x - Math.floor(x);
-  }
-  function series(base, drift, len=10, noise=0.6){
-    const out=[]; let v=base;
-    for(let i=0;i<len;i++){ v += drift + (Math.random()-0.5)*noise; out.push(Number(v.toFixed(2))); }
-    return out;
-  }
-  function ensureChartJS(cb){ if(window.Chart) return cb(); setTimeout(()=>ensureChartJS(cb),120); }
-
-  function renderSlide(n){
-    S.slide=n; $$('.inv-dot').forEach((d,i)=>d.classList.toggle('active', i===n));
-    const t = SLIDES[n]; $('#invText').innerHTML = `<h4 style="margin:0 0 8px 0">${t.title}</h4>${t.info}`;
-    const box = $('#invCharts'); box.innerHTML=''; destroyCharts();
-    const area = S.area; const kpi = INV[area].kpi;
-
-    ensureChartJS(()=>{
-
-      if(n===0){
-        // สไลด์ 1: hint (ไม่ต้องมีกราฟก็ได้, ใส่ legend สี)
-        const card=document.createElement('div'); card.className='chart-card';
-        card.innerHTML=`<h5>Heat Map Legend</h5>
-          <div style="display:flex;gap:10px;align-items:center">
-            <div style="width:60px;height:12px;border-radius:6px;background:linear-gradient(90deg,#bfe8d6,#5cc19b)"></div>
-            <small style="color:#6a7d80">อ่อน → เข้ม = ความหนาแน่นกิจกรรม</small>
-          </div>`;
-        box.appendChild(card);
-      }
-
-      if(n===1){
-        // สไลด์ 2: Demand & Liquidity — line + bar
-        const c1 = makeCanvasCard('Take-up Rate (10Y)','c_takeup'); box.appendChild(c1);
-        const c2 = makeCanvasCard('Absorption Units (Index)','c_absorb'); box.appendChild(c2);
-
-        const base = 50 + seed(area.length)*10;
-        const take = series(base, +0.6, 10, 1.0);
-        const abso = series(80 + seed(area.length+2)*10, +1.2, 6, 3);
-
-        S.charts.push(new Chart($('#c_takeup'), {
-          type:'line', data:{labels:[...Array(10)].map((_,i)=>2015+i),
-            datasets:[{label:'Take-up %', data:take, tension:.35}]
-          }, options:{plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>v+'%'}}}}
-        }));
-        S.charts.push(new Chart($('#c_absorb'), {
-          type:'bar', data:{labels:['H1-20','H2-20','H1-21','H2-21','H1-22','H2-22'],
-            datasets:[{label:'Absorption', data:abso}]},
-          options:{plugins:{legend:{display:false}}}
-        }));
-      }
-
-      if(n===2){
-        // สไลด์ 3: Price Metrics — 3 เส้น
-        const c = makeCanvasCard('Launch vs Resale vs Benchmark (10Y)','c_price'); box.appendChild(c);
-        const start = 100 + seed(area.length+4)*20;
-        const launch = series(start, +1.5, 10, 1.2);
-        const resale = series(start*0.95, +1.2, 10, 1.0);
-        const bench  = series(start*0.9, +0.8, 10, 0.7);
-
-        S.charts.push(new Chart($('#c_price'), {
-          type:'line',
-          data:{labels:[...Array(10)].map((_,i)=>2015+i),
-            datasets:[
-              {label:'Launch', data:launch, tension:.35},
-              {label:'Resale', data:resale, tension:.35},
-              {label:'Benchmark', data:bench, tension:.35}
-            ]},
-          options:{plugins:{legend:{position:'bottom'}}}
-        }));
-      }
-
-      if(n===3){
-        // สไลด์ 4: Supply & Rental — bar + twin bar
-        const c1 = makeCanvasCard('New Projects (units index)','c_supply'); box.appendChild(c1);
-        const c2 = makeCanvasCard('Yield vs Cap Rate','c_yc'); box.appendChild(c2);
-
-        const sup = series(60+seed(area.length+6)*10, +0.5, 6, 2.0);
-        S.charts.push(new Chart($('#c_supply'), {
-          type:'bar', data:{labels:['2019','2020','2021','2022','2023','2024'], datasets:[{label:'New', data:sup}]},
-          options:{plugins:{legend:{display:false}}}
-        }));
-
-        S.charts.push(new Chart($('#c_yc'), {
-          type:'bar',
-          data:{labels:[cap(area)], datasets:[
-            {label:'Yield', data:[kpi.yield]},
-            {label:'Cap Rate', data:[kpi.cap]}
-          ]},
-          options:{indexAxis:'y', scales:{x:{ticks:{callback:v=>v+'%'}}}}
-        }));
-      }
-
-    });
-  }
-
-  /* ---------- open/close ---------- */
-  function openInvestor(){
-    $('#invModal').classList.remove('inv-hidden');
-    $('#investorLens').classList.remove('inv-hidden');
-    document.body.classList.add('inv-open');
-    ensureMap(); selectArea(S.area || 'sukhumvit'); renderSlide(S.slide||0);
-  }
-  function closeInvestor(){
-    $('#invModal').classList.add('inv-hidden');
-    $('#investorLens').classList.add('inv-hidden');
-    document.body.classList.remove('inv-open'); destroyCharts();
-  }
-
-  /* ---------- bindings ---------- */
-  document.addEventListener('DOMContentLoaded', ()=>{
-    // hook ปุ่ม/ลิงก์ “นักลงทุน”
-    const targets=[...document.querySelectorAll('a,button,.chip,[role="button"]')]
-      .filter(el=>/นักลงทุน/.test((el.textContent||'').trim()));
-    targets.forEach(el=>{
-      el.addEventListener('click',(e)=>{e.preventDefault();e.stopImmediatePropagation();openInvestor();},{capture:true});
-      el.removeAttribute('href');
-    });
-
-    $('#invGo').addEventListener('click', ()=>{
-      const s = ($('#invSearch').value||'').toLowerCase().trim();
-      const k = s && Object.keys(INV).find(k=>k.includes(s)) || $('#invArea').value;
-      selectArea(k);
-    });
-    $('#invArea').addEventListener('change', e=>selectArea(e.target.value));
-    $('#invClose').addEventListener('click', closeInvestor);
-    $('#invModal').addEventListener('click', closeInvestor);
-    $$('.inv-dot').forEach(d=>d.addEventListener('click',()=>renderSlide(Number(d.dataset.slide))));
-
-    try{ const p=new URLSearchParams(location.search); if(p.get('lens')==='investor') openInvestor(); }catch(e){}
-  });
-})();
-</script>
-<!-- ===== /Investor Lens (Overlay) — DROP-IN PACK w/ 4 Slide Visuals ===== -->
 </body>
 </html>
+   
